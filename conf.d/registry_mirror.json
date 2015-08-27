@@ -1,0 +1,16 @@
+{
+	"name": "Registry Mirror",
+	"type": "container",
+	"description": "A proxy registry mirror to cache Docker Hub requests.",
+	"kind": "registry",
+	"flavor": "mirror",
+	"image": "registry",
+	"environment": {
+		"STANDALONE": false,
+		"MIRROR_SOURCE": "https://registry-1.docker.io",
+		"MIRROR_SOURCE_INDEX": "https://index.docker.io"
+	},
+	"ports": ["5000:5000"],
+	"volumes": ["/mnt/sda1/data/registry:/tmp/registry-dev"],
+	"restart": true
+}
