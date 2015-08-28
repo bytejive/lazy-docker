@@ -139,7 +139,7 @@ if __name__ == '__main__':
 	parser.add_argument('-e', '--experimental', dest='experimental', action='store_true', help='Whether or not to use the experimental docker engine.')
 	parser.add_argument('-m', '--experimental-multihost-networking', dest='multihost_networking', action='store_true', help='Whether or not to use the experimental docker engine.')
 	parser.add_argument('-n', '--experimental-neighbor-machine', dest='neighbor_machine', help='Whether or not to use the experimental docker engine.')
-	parser.add_argument('-r', '--registry-mirror', dest='registry_mirror', default='pi-registry', help='The registry mirror used to cache Docker Hub requests.')
+	parser.add_argument('-r', '--registry-mirror', dest='registry_mirror', default='registry', help='The registry mirror used to cache Docker Hub requests.')
 	parser.add_argument('-R', '--no-registry-mirror', dest='registry_mirror', action='store_const', const=None, help='Disable the registry mirror.')
 	parser.add_argument('-s', '--swarm-token', dest='swarm_token', help='The swarm token for this machine.')
 	parser.add_argument('--swarm-master', dest='swarm_master', action='store_true', default=False, help='Whether or not this machine will be a swarm master.')
