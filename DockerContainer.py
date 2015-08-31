@@ -224,7 +224,10 @@ if __name__ == '__main__':
 		else:
 			DockerContainer(args.name, args.machine).logs()
 	elif args.action in actions_without_name:
-		print(action_mappings[args.action](DockerContainer(False, args.name)))
+		if not args.machine:
+			print(action_mappings[args.action](DockerContainer(False, args.name)))
+		else:
+			print(action_mappings[args.action](DockerContainer(args.name, args.machine)))
 	elif args.action == 'rm' or args.action == 'remove':
 		print(DockerContainer(args.name, args.machine).remove(stop_if_running=args.force))
 	else:
