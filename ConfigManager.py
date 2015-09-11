@@ -17,7 +17,8 @@ required_machine_fields = [
 optional_machine_fields = {
 	'experimental': False,
 	'consul_machine': False,
-	'multihost_networking': False
+	'multihost_networking': False,
+	'args': False
 }
 
 required_container_fields = [
@@ -33,7 +34,9 @@ optional_container_fields = {
 	'ports': [],
 	'restart': False,
 	'volumes': [],
-	'net': False
+	'net': False,
+	'device': False,
+	'capabilities': []
 }
 
 
@@ -71,7 +74,7 @@ class ConfigManager(object):
 				all_fields += optional_machine_fields
 				for field in configJson:
 					if field not in all_fields:
-						printe('Container config %s has unknown field "%s".' % (config, field), terminate=3)
+						printe('Machine config %s has unknown field "%s".' % (config, field), terminate=3)
 				for field in required_machine_fields:
 					if field not in configJson:
 						printe('Machine config %s is missing its %s.' % (config, field), terminate=3)

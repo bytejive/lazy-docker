@@ -1,0 +1,19 @@
+{
+	"name": "Gitlab Server",
+	"type": "container",
+	"description": "A Gitlab server. Hosts Git repositories and manage them with issue tracking and more.",
+	"kind": "gitlab",
+	"flavor": "server",
+	"image": "gitlab/gitlab-ce:latest",
+	"restart": true,
+	"ports": [
+		"8443:443",
+		"8080:80",
+		"2222:22"
+	],
+	"volumes": [
+		"/mnt/sda1/var/data/gitlab/config:/etc/gitlab",
+		"/mnt/sda1/var/data/gitlab/logs:/var/log/gitlab",
+		"/mnt/sda1/var/data/gitlab/data:/var/opt/gitlab"
+	]
+}

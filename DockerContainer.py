@@ -21,35 +21,42 @@ class DockerContainer(object):
 			return CommandBuilder('docker').append(config)
 		return CommandBuilder('docker')
 
-	def create(self, image, *command_args, environment={}, ports=[], expose=[], links=[], volumes=[], detach=True, restart=False, net=False):
+	def create(self, image, *command_args, capabilities=[], detach=True, device=False, environment={}, expose=[], links=[], net=False, ports=[], restart=False, volumes=[]):
 		command = self.base_command().append('run')
 		command.append('--name', self.name)
+		for cap in capabilities:
+			command.append('--cap-add', cap)
 		if detach:
 			command.append('--detach')
-		if restart:
-			command.append('--restart', 'always')
-		if net:
-			command.append('--net', net)
+		if device:
+			command.append('--device', device)
 		for env_var in environment:
 			value = environment[env_var]
 			if value is True:
 				value = 'true'
 			elif value is False:
 				value = 'false'
-			command.append('-e', '%s=%s' % (env_var, str(value)))
-		ip = self.machine.ip()
-		for port in ports:
-			if not re.match('.+:.+', port):
-				printe('Error: In %s, the port "%s" does not contain both internal and external port.' % (self.name, port), terminate=True)
-			if ip and port.startswith(':'):
-				port = ip + port
-			command.append('-p', port)
+			command.append('--env', '%s=%s' % (env_var, str(value)))
 		for exp_port in expose:
 			command.append('--expose', exp_port)
 		for link in links:
-			if not re.match('.+:.+', link):
+			if not re.match(r'.+:.+', link):
 				printe('Error: In %s, the link "%s" does not contain both a container name and an alias. Example = name:alias' % (self.name, link), terminate=True)
 			command.append('--link', link)
+		if net:
+			command.append('--net', net)
+		if ports:
+			ip = self.machine.ip()
+			for port in ports:
+				if not re.match(r'.+:.+', port):
+					printe('Error: In %s, the port "%s" does not contain both internal and external port.' % (self.name, port), terminate=True)
+				if ip and port.startswith(':'):
+					port = ip + port
+				command.append('-p', port)
+		if restart:
+			command.append('--restart', 'always')
+		for volume in volumes:
+			command.append('--volume', volume)
 		command.append(image)
 
 		pattern = re.compile(r"{{([\w\-_]+)}}")
@@ -198,7 +205,7 @@ if __name__ == '__main__':
 			kind_and_flavor = vars(args)['kind:flavor']
 		else:
 			kind_and_flavor = args.name
-		(kind, sep, flavor) = kind_and_flavor.partition(':')
+		(kind, _, flavor) = kind_and_flavor.partition(':')
 		if args.action == 'create':
 			config = config_manager.getContainerConfig(kind, flavor)
 			DockerContainer(args.name, args.machine).create(
@@ -208,6 +215,8 @@ if __name__ == '__main__':
 				ports=config['ports'],
 				expose=config['expose'],
 				volumes=config['volumes'],
+				device=config['device'],
+				capabilities=config['capabilities'],
 				environment=config['environment'],
 				restart=config['restart'],
 				net=config['net']
