@@ -16,9 +16,9 @@ class DockerContainer(object):
 		self.machine = DockerMachine(machine)
 
 	def base_command(self):
-		config = self.machine.config()
-		if config:
-			return CommandBuilder('docker').append(config)
+		# config = self.machine.config()
+		# if config:
+		# 	return CommandBuilder('docker').append(config)
 		return CommandBuilder('docker')
 
 	def create(self, image, *command_args, capabilities=[], detach=True, device=False, environment={}, expose=[], links=[], net=False, ports=[], restart=False, volumes=[]):
