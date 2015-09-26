@@ -17,9 +17,6 @@ class DockerContainer(object):
 		self.machine = DockerMachine(machine)
 
 	def base_command(self):
-		# config = self.machine.config()
-		# if config:
-		# 	return CommandBuilder('docker').append(config)
 		return CommandBuilder('docker')
 
 	def create(self, image, *command_args, capabilities=[], run=True, detach=True, device=False, environment={}, expose=[], links=[], net=False, ports=[], restart=False, volumes=[]):
@@ -139,9 +136,9 @@ class DockerContainer(object):
 	def images(self):
 		return self.base_command().append('images').run()
 
-	def logs(self):
+	def logs(self, tail=100):
 		if self.name:
-			return self.base_command().append('logs', '--follow', self.name).run(replaceForeground=True)
+			return self.base_command().append('logs', '--follow', '--tail', str(int(tail)), self.name).run(replaceForeground=True)
 		else:
 			return CommandBuilder('bash', '-c', """
 				set -m
