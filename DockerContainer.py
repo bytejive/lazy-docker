@@ -7,6 +7,7 @@ import Utils
 import argparse
 import os
 import re
+import json
 
 
 class DockerContainer(object):
@@ -21,13 +22,17 @@ class DockerContainer(object):
 		# 	return CommandBuilder('docker').append(config)
 		return CommandBuilder('docker')
 
-	def create(self, image, *command_args, capabilities=[], detach=True, device=False, environment={}, expose=[], links=[], net=False, ports=[], restart=False, volumes=[]):
-		command = self.base_command().append('run')
+	def create(self, image, *command_args, capabilities=[], run=True, detach=True, device=False, environment={}, expose=[], links=[], net=False, ports=[], restart=False, volumes=[]):
+		command = self.base_command()
+		if run:
+			command.append('run')
+			if detach:
+				command.append('--detach')
+		else:
+			command.append('create')
 		command.append('--name', self.name)
 		for cap in capabilities:
 			command.append('--cap-add', cap)
-		if detach:
-			command.append('--detach')
 		if device:
 			command.append('--device', device)
 		for env_var in environment:
@@ -36,6 +41,8 @@ class DockerContainer(object):
 				value = 'true'
 			elif value is False:
 				value = 'false'
+			elif isinstance(value, dict) or isinstance(value, list):
+				value = json.dumps(value)
 			command.append('--env', '%s=%s' % (env_var, str(value)))
 		for exp_port in expose:
 			command.append('--expose', exp_port)
@@ -165,6 +172,7 @@ action_mappings = {
 	'processes': DockerContainer.processes,
 	'remove': DockerContainer.remove,
 	'rm': DockerContainer.remove,
+	'run': DockerContainer.create,
 	'running': DockerContainer.is_running,
 	'stop': DockerContainer.stop,
 	'start': DockerContainer.start
@@ -175,7 +183,7 @@ actions_without_name = ['images', 'kinds', 'ps', 'processes', 'logs']
 
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser()
-	parser.add_argument('--config-dir', dest='config_directory', default='/Users/johnstarich/ibin/DockerMachine/conf.d', help='The config directory to be used for creating containers.')
+	parser.add_argument('--config-dir', dest='config_directory', default='~/.lazy-docker', help='The config directory to be used for creating containers.')
 	parser.add_argument('-f', '--force', dest='force', action='store_true', help='Force the current command, if supported.')
 	parser.add_argument('--debug', dest='debug', action='store_const', const=True, help='Print out the commands instead of executing them.')
 	parser.add_argument('-m', '--machine', default=os.environ.get('DOCKER_MACHINE_NAME'), help='The machine in which this container is located.')
@@ -190,7 +198,7 @@ if __name__ == '__main__':
 	elif args.debug is False:
 		os.environ['UTILS_DEBUG'] = 'false'
 
-	if args.action == 'create' and not vars(args)['kind:flavor']:
+	if args.action == 'create' or args.action == 'run' and not vars(args)['kind:flavor']:
 		printe('No kind provided for action "create".')
 		printe(parser.format_usage(), terminate=2)
 
@@ -200,17 +208,18 @@ if __name__ == '__main__':
 		printe('Container name required for action "%s".' % args.action, terminate=2)
 
 	config_manager = ConfigManager(args.config_directory, filter='container')
-	if args.action in ('create', 'describe', 'desc'):
-		if args.action == 'create':
+	if args.action in ('run', 'create', 'describe', 'desc'):
+		if args.action == 'create' or args.action == 'run':
 			kind_and_flavor = vars(args)['kind:flavor']
 		else:
 			kind_and_flavor = args.name
 		(kind, _, flavor) = kind_and_flavor.partition(':')
-		if args.action == 'create':
+		if args.action == 'create' or args.action == 'run':
 			config = config_manager.getContainerConfig(kind, flavor)
 			DockerContainer(args.name, args.machine).create(
 				config['image'],
 				*config['command'],
+				run=args.action == 'run',
 				links=config['links'],
 				ports=config['ports'],
 				expose=config['expose'],

@@ -9,7 +9,7 @@
 	"command": [
 		"-advertise", "{{machine}}",
 		"-bootstrap-expect", "2",
-		"-join", "{{pi-consul01}}"
+		"-join", "{{pi-consul}}"
 	],
 	"ports": [
 		"80:8500",

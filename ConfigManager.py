@@ -43,7 +43,14 @@ optional_container_fields = {
 class ConfigManager(object):
 
 	def __init__(self, config_directory, filter=None):
-		configs = os.listdir(config_directory)
+		if config_directory.startswith('~'):
+			config_directory = os.path.expanduser('~') + config_directory[1:]
+		if not os.path.exists(config_directory):
+			os.makedirs(config_directory)
+		try:
+			configs = os.listdir(config_directory)
+		except:
+			printe('Could not list files in the directory:', config_directory, terminate=True)
 		self.configs = {}
 		for config in configs:
 			if not config.endswith('.json'):
@@ -124,8 +131,8 @@ class ConfigManager(object):
 		return self.describe('machine', kind, flavor)
 
 	def describe(self, config_type, kind, flavor):
-		config = self.get(kind, flavor)
-		return '"%s":\t%s' % (config[config_type]['name'], config[config_type]['description'])
+		config = self.get(config_type, kind, flavor)
+		return '"%s":\t%s' % (config['name'], config['description'])
 
 	def listContainers(self):
 		return self.list('container')
