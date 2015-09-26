@@ -1,0 +1,35 @@
+{
+	"name": "LDAP Admin Web UI",
+	"type": "container",
+	"kind": "ldap",
+	"flavor": "dashboard",
+	"description": "An LDAP Admin Web UI",
+	"image": "osixia/phpldapadmin:latest",
+	"ports": [
+		"443:443"
+	],
+	"links": [
+		"ldap:ldap"
+	],
+	"environment": {
+		"PHPLDAPADMIN_LDAP_HOSTS": [
+			{
+				"ldap": [
+					{
+						"server": [
+							{
+								"tls": "False"
+							}
+						]
+					}, {
+						"login": [
+							{
+								"bind_id": "cn=admin,dc=johnstarich,dc=com"
+							}
+						]
+					}
+				]
+			}
+		]
+	}
+}
