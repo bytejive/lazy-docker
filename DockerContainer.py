@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 from CommandBuilder import CommandBuilder
-from ConfigManager import ConfigManager
+from ConfigManager import ConfigManager, required_fields, required_container_fields
 from DockerMachine import DockerMachine
 from Utils import printe
 import Utils
@@ -14,34 +14,36 @@ class DockerContainer(object):
 
     def __init__(self, name, machine):
         self.name = name
-        if isinstance(machine, DockerMachine):
-            self.machine = machine
+        if machine is None:
+            self.machine = None
         else:
             self.machine = DockerMachine(machine)
 
     def base_command(self):
         return CommandBuilder('docker')
 
-    def create(self, image, *command_args, privileged=False, user=None, capabilities=[], run=True, detach=True, device=False, environment={}, expose=[], links=[], net=False, ports=[], restart=False, volumes=[], volumes_from=False):
+    def create(self, image, *command_args, **config):
         command = self.base_command()
-        if run:
+        if config is None:
+            config = dict()
+        if config.get('run') is True:
             command.append('run')
-            if detach:
+            if config.get('detach') is True:
                 command.append('--detach')
         else:
             command.append('create')
         command.append('--name', self.name)
 
-        if privileged is True:
+        if config.get('privileged') is True:
             command.append('--privileged')
-        if user is not None:
-            command.append('--user', user)
-        for cap in capabilities:
+        if config.get('user') is not None:
+            command.append('--user', config.get('user'))
+        for cap in config.get('capabilities', list()):
             command.append('--cap-add', cap)
-        if device:
-            command.append('--device', device)
-        for env_var in environment:
-            value = environment[env_var]
+        if config.get('device') is not None:
+            command.append('--device', config.get('device'))
+        for env_var in config.get('environment', dict()):
+            value = config.get('environment')[env_var]
             if value is True:
                 value = 'true'
             elif value is False:
@@ -49,28 +51,28 @@ class DockerContainer(object):
             elif isinstance(value, dict) or isinstance(value, list):
                 value = json.dumps(value)
             command.append('--env', '%s=%s' % (env_var, str(value)))
-        for exp_port in expose:
+        for exp_port in config.get('expose', list()):
             command.append('--expose', exp_port)
-        for link in links:
+        for link in config.get('links', list()):
             if not re.match(r'.+:.+', link):
                 printe('Error: In %s, the link "%s" does not contain both a container name and an alias. Example = name:alias' % (self.name, link), terminate=True)
             command.append('--link', link)
-        if net:
-            command.append('--net', net)
-        if ports:
-            ip = self.machine.ip()
-            for port in ports:
+        if config.get('net') is not None:
+            command.append('--net', config.get('net'))
+        if config.get('ports') is not None:
+            ip = self.machine.ip() if self.machine is not None else None
+            for port in config.get('ports'):
                 if not re.match(r'.+:.+', port):
                     printe('Error: In %s, the port "%s" does not contain both internal and external port.' % (self.name, port), terminate=True)
                 if ip and port.startswith(':'):
                     port = ip + port
                 command.append('-p', port)
-        if restart:
+        if config.get('restart') is True:
             command.append('--restart', 'always')
-        for volume in volumes:
+        for volume in config.get('volumes', list()):
             command.append('--volume', volume)
-        if volumes_from:
-            command.append('--volumes-from', volumes_from)
+        if config.get('volumes-from') is not None:
+            command.append('--volumes-from', config.get('volumes-from'))
         command.append(image)
 
         pattern = re.compile(r"{{([\w\-_]+)}}")
@@ -78,7 +80,7 @@ class DockerContainer(object):
             for match in pattern.finditer(arg):
                 name = match.group(1)
                 if name == 'machine':
-                    ip = self.machine.ip()
+                    ip = self.machine.ip() if self.machine is not None else None
                 else:
                     try:
                         printe('Looking for machine with name %s' % name)
@@ -86,6 +88,8 @@ class DockerContainer(object):
                     except:
                         printe('Looking for neighboring container with name %s' % name)
                         ip = DockerContainer(name, self.machine.name).ip()
+                if ip is None:
+                    ip = '127.0.0.1'
                 arg = arg.replace(match.group(0), ip)
             command.append(arg)
         return command.run()
@@ -232,22 +236,15 @@ if __name__ == '__main__':
             config = config_manager.getContainerConfig(kind, flavor)
             if not args.machine and args.url:
                 args.machine = DockerMachine(url=args.url)
+            container_config = dict(config)
+            for key in required_fields + required_container_fields:
+                if key in container_config:
+                    del container_config[key]
+            container_config['run'] = args.action == 'run'
             DockerContainer(args.name, args.machine).create(
                 config['image'],
                 *config['command'],
-                run=args.action == 'run',
-                links=config['links'],
-                ports=config['ports'],
-                expose=config['expose'],
-                volumes=config['volumes'],
-                                volumes_from=config['volumes-from'],
-                device=config['device'],
-                capabilities=config['capabilities'],
-                                privileged=config['privileged'],
-                                user=config['user'],
-                environment=config['environment'],
-                restart=config['restart'],
-                net=config['net']
+                **container_config,
             )
         else:
             print(config_manager.describeContainer(kind, flavor))

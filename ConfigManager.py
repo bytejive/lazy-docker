@@ -32,14 +32,14 @@ optional_container_fields = {
     'expose': [],
     'links': [],
     'ports': [],
-    'restart': False,
+    'restart': None,
     'volumes': [],
-    'volumes-from': False,
-    'net': False,
-    'device': False,
+    'volumes-from': None,
+    'net': None,
+    'device': None,
     'capabilities': [],
     'user': None,
-    'privileged': False,
+    'privileged': None,
 }
 
 

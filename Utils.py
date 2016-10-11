@@ -58,7 +58,3 @@ debug = Utils.debug
 epoch = Utils.epoch
 terminal_size = Utils.terminal_size
 
-
-if __name__ == '__main__':
-    os.environ['UTILS_DEBUG'] = 'true'
-    print(run('bash', 'nope'))
