@@ -41,31 +41,31 @@ class DockerMachine(object):
             name = '127.0.0.1'
         self.name = name
 
-    def create(self, driver, consul=False, experimental=False, multihost_networking=False, neighbor_machine=False, registry_mirror=False, swarm_token=False, swarm_master=False):
+    def create(self, driver, **config):
         command = CommandBuilder('docker-machine', 'create')
         command.append('--driver', driver)
-        if swarm_token:
+        if config.get('swarm_token') is not None:
             command.append('--swarm')
-            command.append('--swarm-discovery', 'token://%s' % swarm_token)
-        if swarm_master:
+            command.append('--swarm-discovery', 'token://%s' % config.get('swarm_token'))
+        if config.get('swarm_master') is not None:
             command.append('--swarm-master')
-        if registry_mirror:
-            ip = DockerMachine(registry_mirror).ip()
+        if config.get('registry_mirror') is not None:
+            ip = DockerMachine(config.get('registry_mirror')).ip()
             if not ip:
                 printe('IP for the registry machine could not be determined. Does that machine have an IP?', terminate=True)
             command.append('--engine-registry-mirror', 'http://%s:5000' % ip)
-        if experimental:
+        if config.get('experimental') is not None:
             command.append('--engine-install-url', 'https://experimental.docker.com')
-        if neighbor_machine and not multihost_networking:
+        if config.get('neighbor_machine') is not None and not config.get('multihost_networking') is not None:
             printe('Neighbor machine was provided but multihost networking was not enabled explicitly. Multihost networking must be enabled if neighboring machine is to be used.', terminate=2)
-        if multihost_networking:
+        if config.get('multihost_networking') is not None:
             command.append('--engine-opt', 'default-network=overlay:multihost')
             command.append('--engine-label', 'com.docker.network.driver.overlay.bind_interface=eth0')
-            if neighbor_machine:
-                command.append('--engine-label', 'com.docker.network.driver.overlay.neighbor_ip=%s' % DockerMachine(neighbor_machine).ip())
-        if consul:
-            if isinstance(consul, str):
-                consul_name = consul
+            if config.get('neighbor_machine') is not None:
+                command.append('--engine-label', 'com.docker.network.driver.overlay.neighbor_ip=%s' % DockerMachine(config.get('neighbor_machine')).ip())
+        if config.get('consul') is not None:
+            if isinstance(config.get('consul'), str):
+                consul_name = config.get('consul')
             else:
                 consul_name = 'consul'
             command.append('--engine-opt', 'kv-store=consul:%s:8500' % DockerMachine(consul_name).ip())
@@ -165,15 +165,15 @@ if __name__ == '__main__':
     elif args.action in actions_without_name:
         action_mappings[args.action]()
     elif args.action == 'create':
+        machine_config = dict(vars(args))
+        if 'consul_machine' in machine_config:
+            machine_config['consul'] = machine_config['consul_machine']
+            del machine_config['consul_machine']
+        if 'driver' in machine_config:
+            del machine_config['driver']
         DockerMachine(args.name).create(
             args.driver,
-            consul=args.consul_machine,
-            experimental=args.experimental,
-            neighbor_machine=args.neighbor_machine,
-            multihost_networking=args.multihost_networking,
-            registry_mirror=args.registry_mirror,
-            swarm_token=args.swarm_token,
-            swarm_master=args.swarm_master
+            **machine_config
         )
     else:
         result = action_mappings[args.action](DockerMachine(args.name))

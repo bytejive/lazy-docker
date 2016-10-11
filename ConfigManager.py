@@ -144,9 +144,11 @@ class ConfigManager(object):
         return self.list('machine')
 
     def list(self, config_type):
-        list = []
+        ls = []
+        if config_type not in self.configs:
+            return ls
         for kind in self.configs[config_type]:
             for flavor in self.configs[config_type][kind]:
-                list += ['%s:%s' % (kind, flavor)]
-        return list
+                ls += ['%s:%s' % (kind, flavor)]
+        return ls
 
