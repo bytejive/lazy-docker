@@ -12,7 +12,7 @@ import json
 
 class DockerContainer(object):
 
-    def __init__(self, name, machine):
+    def __init__(self, name, machine=None):
         self.name = name
         if machine is None:
             self.machine = None
@@ -34,6 +34,10 @@ class DockerContainer(object):
             command.append('create')
         command.append('--name', self.name)
 
+        if config.get('tty') is not None:
+            command.append('--tty')
+        if config.get('interactive') is not None:
+            command.append('--interactive')
         if config.get('privileged') is True:
             command.append('--privileged')
         if config.get('user') is not None:

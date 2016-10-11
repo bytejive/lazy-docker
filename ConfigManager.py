@@ -7,7 +7,7 @@ required_fields = [
     'description',
     'type',
     'kind',
-    'flavor'
+    'flavor',
 ]
 
 required_machine_fields = [
@@ -18,11 +18,11 @@ optional_machine_fields = {
     'experimental': False,
     'consul_machine': False,
     'multihost_networking': False,
-    'args': False
+    'args': False,
 }
 
 required_container_fields = [
-    'image'
+    'image',
 ]
 
 # Optional container config fields with their default values.
@@ -40,6 +40,8 @@ optional_container_fields = {
     'capabilities': [],
     'user': None,
     'privileged': None,
+    'interactive': None,
+    'tty': None,
 }
 
 
@@ -103,7 +105,7 @@ class ConfigManager(object):
             elif flavor in self.configs[config_type][kind]:
                 printe(
                     "Duplicate kind:flavor configs found: %s %s. Please change or remove one of these configs to have a different kind:flavor combination." % (
-                        self.configs[config_type][kind][flavor].file_name,
+                        self.configs[config_type][kind][flavor]['file_name'],
                         config
                     ),
                     terminate=True
