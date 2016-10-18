@@ -15,11 +15,13 @@ class CommandBuilder(object):
                 for sub_arg in arg:
                     self.append(sub_arg)
             else:
-                printe('Error appending argument of unknown type: ' + str(type(arg)), terminate=True)
+                printe('Error appending argument of unknown type: {}'.format(
+                       str(type(arg))), terminate=True)
         return self
 
     def debug(self):
         return Utils.debug(*self.command_args)
 
     def run(self, replaceForeground=False):
-        return Utils.run(*self.command_args, replaceForeground=replaceForeground)
+        return Utils.run(*self.command_args,
+                         replaceForeground=replaceForeground)
