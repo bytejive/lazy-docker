@@ -55,7 +55,8 @@ class ConfigManager(object):
         try:
             configs = os.listdir(config_directory)
         except:
-            printe('Could not list files in the directory:', config_directory, terminate=True)
+            printe('Could not list files in the directory:', config_directory,
+                   terminate=True)
         self.configs = {}
         for config in configs:
             if not config.endswith('.json'):
@@ -66,17 +67,22 @@ class ConfigManager(object):
                 continue
             for field in required_fields:
                 if field not in configJson:
-                    printe('Config %s is missing its %s.' % (config, field), terminate=3)
+                    printe('Config %s is missing its %s.' % (config, field),
+                           terminate=3)
             if configJson['type'] == 'container':
                 all_fields = list(required_fields)
                 all_fields += required_container_fields
                 all_fields += optional_container_fields
                 for field in configJson:
                     if field not in all_fields:
-                        printe('Container config %s has unknown field "%s".' % (config, field), terminate=3)
+                        printe('Container config {config} has unknown field '
+                               '"{field}".'.format(config=config, field=field),
+                               terminate=3)
                 for field in required_container_fields:
                     if field not in configJson:
-                        printe('Container config %s is missing its %s.' % (config, field), terminate=3)
+                        printe('Container config {config} is missing its '
+                               'field.'.format(config=config, field=field),
+                               terminate=3)
                 for field in optional_container_fields:
                     if field not in configJson:
                         configJson[field] = optional_container_fields[field]
@@ -86,15 +92,20 @@ class ConfigManager(object):
                 all_fields += optional_machine_fields
                 for field in configJson:
                     if field not in all_fields:
-                        printe('Machine config %s has unknown field "%s".' % (config, field), terminate=3)
+                        printe('Machine config {config} has unknown field '
+                               '"{field}".'.format(config=config, field=field),
+                               terminate=3)
                 for field in required_machine_fields:
                     if field not in configJson:
-                        printe('Machine config %s is missing its %s.' % (config, field), terminate=3)
+                        printe('Machine config {config} is missing its '
+                               '{field}.'.format(config=config, field=field),
+                               terminate=3)
                 for field in optional_machine_fields:
                     if field not in configJson:
                         configJson[field] = optional_machine_fields[field]
             else:
-                printe('Unknown type "%s". Available types are: container, machine' % configJson['type'], terminate=3)
+                printe('Unknown type "{}". Available types are: container, '
+                       'machine'.format(configJson['type']), terminate=3)
             config_type = configJson['type']
             kind = configJson['kind']
             flavor = configJson['flavor']
@@ -104,9 +115,12 @@ class ConfigManager(object):
                 self.configs[config_type][kind] = {}
             elif flavor in self.configs[config_type][kind]:
                 printe(
-                    "Duplicate kind:flavor configs found: %s %s. Please change or remove one of these configs to have a different kind:flavor combination." % (
-                        self.configs[config_type][kind][flavor]['file_name'],
-                        config
+                    "Duplicate kind:flavor configs found: {file} {config}. "
+                    "Please change or remove one of these configs to have a "
+                    "different kind:flavor combination.".format(
+                        file=self.configs[config_type][kind][flavor]
+                                 .get('file_name'),
+                        config=config,
                     ),
                     terminate=True
                 )
@@ -126,7 +140,8 @@ class ConfigManager(object):
         if kind not in self.configs[config_type]:
             printe('Unknown %s kind: "%s"' % (config_type, kind), terminate=2)
         if flavor not in self.configs[config_type][kind]:
-            printe('Unknown %s flavor for %s: "%s"' % (config_type, kind, flavor), terminate=2)
+            printe('Unknown {type} flavor for {kind}: "{flavor}"'.format(
+                type=config_type, kind=kind, flavor=flavor), terminate=2)
         return self.configs[config_type][kind][flavor]
 
     def describeContainer(self, kind, flavor):
@@ -153,4 +168,3 @@ class ConfigManager(object):
             for flavor in self.configs[config_type][kind]:
                 ls += ['%s:%s' % (kind, flavor)]
         return ls
-
