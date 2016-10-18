@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from CommandBuilder import CommandBuilder
-from ConfigManager import ConfigManager, required_fields, required_container_fields
+from ConfigManager import ConfigManager, required_fields, \
+    required_container_fields
 from DockerMachine import DockerMachine
 from Utils import printe
 import Utils
@@ -59,7 +60,12 @@ class DockerContainer(object):
             command.append('--expose', exp_port)
         for link in config.get('links', list()):
             if not re.match(r'.+:.+', link):
-                printe('Error: In %s, the link "%s" does not contain both a container name and an alias. Example = name:alias' % (self.name, link), terminate=True)
+                printe('Error: In {name}, the link "{link}" does not contain'
+                       ' both a container name and an alias. '
+                       'Example = name:alias'.format(
+                           name=self.name,
+                           link=link,
+                       ), terminate=True)
             command.append('--link', link)
         if config.get('net') is not None:
             command.append('--net', config.get('net'))
@@ -67,7 +73,9 @@ class DockerContainer(object):
             ip = self.machine.ip() if self.machine is not None else None
             for port in config.get('ports'):
                 if not re.match(r'.+:.+', port):
-                    printe('Error: In %s, the port "%s" does not contain both internal and external port.' % (self.name, port), terminate=True)
+                    printe('Error: In {name}, the port "{port}" does not '
+                           'contain both internal and external port.'
+                           .format(self.name, port), terminate=True)
                 if ip and port.startswith(':'):
                     port = ip + port
                 command.append('-p', port)
@@ -84,13 +92,17 @@ class DockerContainer(object):
             for match in pattern.finditer(arg):
                 name = match.group(1)
                 if name == 'machine':
-                    ip = self.machine.ip() if self.machine is not None else None
+                    if self.machine is not None:
+                        ip = self.machine.ip()
+                    else:
+                        ip = None
                 else:
                     try:
                         printe('Looking for machine with name %s' % name)
                         ip = DockerMachine(name).ip()
                     except:
-                        printe('Looking for neighboring container with name %s' % name)
+                        printe('Looking for neighboring container with '
+                               'name {name}'.format(name))
                         ip = DockerContainer(name, self.machine.name).ip()
                 if ip is None:
                     ip = '127.0.0.1'
@@ -99,14 +111,20 @@ class DockerContainer(object):
         return command.run()
 
     def is_running(self):
-        running = self.base_command().append('inspect', '-f', '{{.State.Running}}', self.name).run()
+        running = self.base_command().append('inspect', '-f',
+                                             '{{.State.Running}}',
+                                             self.name).run()
         return running == 'true'
 
     def shell(self, shell='sh'):
-        return self.base_command().append('exec', '-it', self.name, shell).run(replaceForeground=True)
+        return self.base_command().append('exec', '-it',
+                                          self.name, shell)\
+                                        .run(replaceForeground=True)
 
     def ip(self):
-        return self.base_command().append('inspect', '--format', '{{.NetworkSettings.IPAddress}}', self.name).run()
+        return self.base_command().append('inspect', '--format',
+                                          '{{.NetworkSettings.IPAddress}}',
+                                          self.name).run()
 
     def remove(self, stop_if_running=False):
         if self.is_running() and stop_if_running:
@@ -145,30 +163,35 @@ class DockerContainer(object):
         if terminal_size:
             min_col_width = 20
             table_column_space = int(terminal_size[1] / min_col_width)
-            layout = ['Names', 'ID', 'Image', 'Command', 'Status', 'CreatedAt', 'Ports']
-            table = make_table(DockerContainer.processes_column_layouts.get(table_column_space, layout))
+            layout = ['Names', 'ID', 'Image', 'Command', 'Status', 'CreatedAt',
+                      'Ports']
+            table = make_table(DockerContainer.processes_column_layouts.get(
+                table_column_space, layout))
         else:
             table = make_table('Names', 'Image', 'Status')
-        return self.base_command().append('ps', '--all', '--format', table).run()
+        return self.base_command().append('ps', '--all',
+                                          '--format', table).run()
 
     def images(self):
         return self.base_command().append('images').run()
 
     def logs(self, tail=100):
         if self.name:
-            return self.base_command().append('logs', '--follow', '--tail', str(int(tail)), self.name).run(replaceForeground=True)
+            return self.base_command().append('logs', '--follow', '--tail',
+                                              str(int(tail)), self.name
+                                              ).run(replaceForeground=True)
         else:
             return CommandBuilder('bash', '-c', """
-                set -m
-                trap 'kill $(jobs -p)' 2
-                count=0
-                for c in $(docker ps --format "{{.Names}}"); do
-                    color="$(echo "$c" | md5 | cut -c1-4)"
-                    color=$((31 + ((16#${color}) % 7) ))
-                    docker logs -f $c | sed "s/^/\033[1;${color}m$c | \033[0;00m/" &
-                    count+=1
-                done
-                wait
+       set -m
+       trap 'kill $(jobs -p)' 2
+       count=0
+       for c in $(docker ps --format "{{.Names}}"); do
+           color="$(echo "$c" | md5 | cut -c1-4)"
+           color=$((31 + ((16#${color}) % 7) ))
+           docker logs -f $c | sed "s/^/\033[1;${color}m$c | \033[0;00m/" &
+           count+=1
+       done
+       wait
             """).run(replaceForeground=True)
 
 
@@ -198,15 +221,34 @@ actions_without_name = ['images', 'kinds', 'ps', 'processes', 'logs']
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config-dir', dest='config_directory', default='~/.lazy-docker', help='The config directory to be used for creating containers.')
-    parser.add_argument('-f', '--force', dest='force', action='store_true', help='Force the current command, if supported.')
-    parser.add_argument('--debug', dest='debug', action='store_const', const=True, help='Print out the commands instead of executing them.')
-    parser.add_argument('-m', '--machine', default=os.environ.get('DOCKER_MACHINE_NAME'), help='The machine in which this container is located.')
-    parser.add_argument('-H', '--url', default=os.environ.get('DOCKER_HOST'), help='The machine URL in which this container is located.')
-    parser.add_argument('--no-debug', dest='debug', action='store_const', const=False, help='Disable debug mode.')
-    parser.add_argument('action', choices=action_mappings, help='The action to perform: %s' % ', '.join(action_mappings))
-    parser.add_argument('name', nargs='?', help='The name of the container to be used.')
-    parser.add_argument('kind:flavor', nargs='?', help='Of form "kind:flavor". Kinds available are determined by the kinds in the config directory. Use the actions "kinds" to look up all available options.')
+    parser.add_argument('--config-dir', dest='config_directory',
+                        default='~/.lazy-docker',
+                        help='The config directory to be used for creating '
+                             'containers.')
+    parser.add_argument('-f', '--force', dest='force', action='store_true',
+                        help='Force the current command, if supported.')
+    parser.add_argument('--debug', dest='debug', action='store_const',
+                        const=True,
+                        help='Print out the commands instead of executing '
+                             'them.')
+    parser.add_argument('-m', '--machine',
+                        default=os.environ.get('DOCKER_MACHINE_NAME'),
+                        help='The machine in which this container is located.')
+    parser.add_argument('-H', '--url', default=os.environ.get('DOCKER_HOST'),
+                        help='The machine URL in which this container is '
+                             'located.')
+    parser.add_argument('--no-debug', dest='debug', action='store_const',
+                        const=False, help='Disable debug mode.')
+    parser.add_argument('action', choices=action_mappings,
+                        help='The action to perform: %s' % ', '.join(
+                            action_mappings))
+    parser.add_argument('name', nargs='?',
+                        help='The name of the container to be used.')
+    parser.add_argument('kind:flavor', nargs='?',
+                        help='Of form "kind:flavor". Kinds available are '
+                             'determined by the kinds in the config '
+                             'directory. Use the actions "kinds" to look up '
+                             'all available options.')
     args = parser.parse_args()
 
     if args.debug is True:
@@ -214,22 +256,27 @@ if __name__ == '__main__':
     elif args.debug is False:
         os.environ['UTILS_DEBUG'] = 'false'
 
-    if args.action == 'create' or args.action == 'run' and not vars(args)['kind:flavor']:
+    if args.action == 'create' or args.action == 'run' \
+            and not vars(args)['kind:flavor']:
         printe('No kind provided for action "create".')
         printe(parser.format_usage(), terminate=2)
 
     if args.action not in actions_without_name and not args.name:
         if args.action in ('desc', 'describe'):
-            printe('Container kind:flavor required for action "%s". Use action "kinds" to list available options.' % args.action, terminate=2)
-        printe('Container name required for action "%s".' % args.action, terminate=2)
+            printe('Container kind:flavor required for action "{action}". Use '
+                   'action "kinds" to list available options.'.format(
+                       args.action), terminate=2)
+        printe('Container name required for action "{action}".'.format(
+            args.action), terminate=2)
 
     config_manager = ConfigManager(args.config_directory, filter='container')
     if args.action in ('run', 'create', 'describe', 'desc'):
-        #if not args.machine and args.host:
-        #	args.machine = re.search(r"\w+\://([^:]+)(?:\:[0-9]+)?", args.host).group(1)
-        #else:
-        #	print('"', args.machine, '"')
-        #	print('"', args.host, '"')
+        # if not args.machine and args.host:
+        #     args.machine = re.search(r"\w+\://([^:]+)(?:\:[0-9]+)?",
+        #         args.host).group(1)
+        # else:
+        #     print('"', args.machine, '"')
+        #     print('"', args.host, '"')
 
         if args.action == 'create' or args.action == 'run':
             kind_and_flavor = vars(args)['kind:flavor']
@@ -253,9 +300,11 @@ if __name__ == '__main__':
         else:
             print(config_manager.describeContainer(kind, flavor))
     elif args.action == 'kinds':
-        printe("Here's a list of available kinds to create containers from:", flush=True)
+        printe("Here's a list of available kinds to create containers from:",
+               flush=True)
         print('\n'.join(config_manager.listContainers()), flush=True)
-        printe('To create one, use the "create" action, supply a name, and put kind:flavor on the end.')
+        printe('To create one, use the "create" action, supply a name, and put'
+               ' kind:flavor on the end.')
     elif args.action == 'logs':
         if not args.name:
             DockerContainer(False, args.name).logs()
@@ -263,10 +312,14 @@ if __name__ == '__main__':
             DockerContainer(args.name, args.machine).logs()
     elif args.action in actions_without_name:
         if not args.machine:
-            print(action_mappings[args.action](DockerContainer(False, args.name)))
+            print(action_mappings[args.action](DockerContainer(False,
+                                                               args.name)))
         else:
-            print(action_mappings[args.action](DockerContainer(args.name, args.machine)))
+            print(action_mappings[args.action](DockerContainer(args.name,
+                                                               args.machine)))
     elif args.action == 'rm' or args.action == 'remove':
-        print(DockerContainer(args.name, args.machine).remove(stop_if_running=args.force))
+        print(DockerContainer(args.name,
+                              args.machine).remove(stop_if_running=args.force))
     else:
-        print(action_mappings[args.action](DockerContainer(args.name, args.machine)))
+        print(action_mappings[args.action](DockerContainer(args.name,
+                                                           args.machine)))
