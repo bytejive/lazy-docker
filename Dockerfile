@@ -7,9 +7,8 @@ RUN apk add --no-cache \
     py-pip \
     python3 \
     python
-RUN pip install \
-    nose \
-    pep8
 WORKDIR /src
+COPY ./setup.py /src/
+RUN pip install . .[test]
 COPY . /src
 
