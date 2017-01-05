@@ -38,6 +38,7 @@ class Utils(object):
         except KeyboardInterrupt:
             printe('Keyboard Interrupt fired.')
         except:
+            exit_status = None
             try:
                 exit_status = int(re.search("[0-9]+$",
                                             str(sys.exc_info()[1])).group(0))
